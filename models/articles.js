@@ -5,7 +5,11 @@ const articleSchema = mongoose.Schema({
   imgArticle: String,
   content: String,
   creationDatetime: Date,
-  userId: { type: mongoose.Schema.Types.ObjectId, ref: "users" },
+  userId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "users",
+    required: true,
+  },
 });
 
 const Article = mongoose.model("articles", articleSchema);
