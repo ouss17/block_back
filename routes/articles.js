@@ -16,6 +16,6 @@ router.get("/:articleId", getArticleById);
 router.post("/", auth, createArticle);
 router.put("/:articleId", auth, updateArticle);
 router.delete("/:articleId", auth, deleteArticle);
-router.get("/articlesByUser", auth, getArticlesByUser);
+router.get("/articlesByUser/:userId", auth, getArticlesByUser);
 
 module.exports = router;

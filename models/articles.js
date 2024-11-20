@@ -2,9 +2,19 @@ const mongoose = require("mongoose");
 
 const articleSchema = mongoose.Schema({
   title: String,
-  imgArticle: String,
+  imgArticle: { type: String, default: "" },
   content: String,
-  creationDatetime: Date,
+  creationDatetime: {
+    type: Date,
+    default: () => Date.now(),
+  },
+  updateDatetime: {
+    type: Date,
+  },
+  public: {
+    type: Boolean,
+    default: true,
+  },
   userId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "users",
