@@ -48,6 +48,7 @@ exports.signup = (req, res) => {
           {
             id: data.id,
             role: data.role,
+            email: data?.email,
           },
 
           JWT_SECRET,
@@ -94,6 +95,7 @@ exports.signin = (req, res) => {
         {
           id: data?.id,
           role: data?.role,
+          email: data?.email,
         },
 
         JWT_SECRET,
@@ -148,7 +150,7 @@ exports.updateUser = (req, res) => {
       User.findOne({
         email: { $regex: new RegExp(email, "i") },
       }).then((datas) => {
-        if (datas) {
+        if (datas && email !== req.user.email) {
           res.json({
             result: false,
             error: "Un utilisateur avec cet email existe déja !",
@@ -158,8 +160,30 @@ exports.updateUser = (req, res) => {
             { _id: req.user.id },
             { $set: { username, birthDate, email } },
             { new: true }
-          ).then((result) => {
-            res.json({ result: true, data: result });
+          ).then(() => {
+            User.findOne({ _id: req.user.id }).then((result) => {
+              console.log(result);
+              const token = jwt.sign(
+                {
+                  id: result?.id,
+                  role: result?.role,
+                  email: result?.email,
+                },
+
+                JWT_SECRET,
+                {
+                  expiresIn: "24h",
+                }
+              );
+
+              res.cookie("jwt", token, {
+                httpOnly: true,
+                secure: process.env.NODE_ENV === "production",
+                sameSite: "strict",
+                maxAge: 24 * 60 * 60 * 1000,
+              });
+              res.json({ result: true, data: result });
+            });
           });
         }
       });
@@ -170,16 +194,16 @@ exports.updateUser = (req, res) => {
 };
 
 exports.updatePassword = (req, res) => {
-  const { password } = req.body;
+  const { confirmPassword, lastPassword } = req.body;
   User.findOne({ _id: req.user.id }).then((data) => {
-    if (!checkBody(req.body, ["password"])) {
+    if (!checkBody(req.body, ["confirmPassword", "lastPassword"])) {
       return res
         .status(400)
         .json({ result: false, error: "Missing or empty fields." });
     }
     const passwordRegexValidation =
       /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
-    if (!passwordRegexValidation.test(password)) {
+    if (!passwordRegexValidation.test(confirmPassword)) {
       return res.status(500).json({
         result: false,
         error:
@@ -187,14 +211,21 @@ exports.updatePassword = (req, res) => {
       });
     }
     if (data) {
-      const hash = bcrypt.hashSync(password, 10);
-      User.updateOne(
-        { _id: req.user.id },
-        { password: hash },
-        { new: true }
-      ).then((result) => {
-        res.json({ result: true, data: result });
-      });
+      if (bcrypt.compareSync(lastPassword, data.password)) {
+        const hash = bcrypt.hashSync(confirmPassword, 10);
+        User.updateOne(
+          { _id: req.user.id },
+          { password: hash },
+          { new: true }
+        ).then((result) => {
+          res.json({ result: true, data: result });
+        });
+      } else {
+        res.json({
+          result: false,
+          error: "Vous ne vous souvenez plus de votre ancien mot de passe ?",
+        });
+      }
     } else {
       res.json({ result: false, error: "Utilisateur introuvable !" });
     }

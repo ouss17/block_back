@@ -124,11 +124,14 @@ exports.deleteArticle = (req, res) => {
 };
 
 exports.getArticlesByUser = (req, res) => {
-  User.findById(req.params.userId).then((data) => {
+  console.log(req.params.userId);
+  User.find({ _id: req.params.userId }).then((data) => {
+    console.log(data);
     if (data) {
       Article.find({ userId: req.params.userId })
         .populate("userId")
         .then((result) => {
+          console.log(result);
           res.json({ result: true, data: result });
         });
     } else {
